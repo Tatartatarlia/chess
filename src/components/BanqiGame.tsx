@@ -318,7 +318,7 @@ export function BanqiGame({ launch, announce, hint, onHome, onFinish }: BanqiGam
           <p className={`status status-${status}`} aria-live="polite">
             {text}
           </p>
-          <p className="rule-line">大子吃小子。兵能吃将，将不能吃兵。一样大互相吃掉。炮平时走一格，吃子时只能紧挨着隔一枚棋，中间不能再空一格。</p>
+          <p className="rule-line">大子吃小子。兵能吃将，将不能吃兵。一样大互相吃掉，但炮吃炮只去掉对方。炮平时走一格，吃子时只能紧挨着隔一枚棋，中间不能再空一格。</p>
         </div>
         <div className="actions">
           <button type="button" className="ghost" onClick={undo} disabled={!canUndo}>

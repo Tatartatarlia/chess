@@ -154,9 +154,7 @@ export function moveTargets(board: Uint8Array, from: number): { to: number; kind
       const beyond = step(adjacent, dx, dy);
       if (beyond === null) continue;
       const at = board[beyond];
-      if (isRevealed(at) && sideOf(at) !== side) {
-        targets.push({ to: beyond, kind: (at & 7) === CANNON ? 'both' : 'take' });
-      }
+      if (isRevealed(at) && sideOf(at) !== side) targets.push({ to: beyond, kind: 'take' });
       continue;
     }
 
@@ -209,10 +207,7 @@ export function commitMove(board: Uint8Array, from: number, to: number) {
     return;
   }
   const attackRank = attacker & 7;
-  const defendRank = target & 7;
-  const both =
-    attackRank === defendRank ||
-    (attackRank !== CANNON && captureKind(attackRank, defendRank) === 'both');
+  const both = attackRank !== CANNON && captureKind(attackRank, target & 7) === 'both';
   board[to] = both ? EMPTY : attacker;
 }
 

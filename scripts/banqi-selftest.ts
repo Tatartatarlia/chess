@@ -88,10 +88,10 @@ cannonDuel[0] = open(CANNON, RED);
 cannonDuel[1] = hidden(HORSE, RED);
 cannonDuel[2] = open(CANNON, BLACK);
 const cannonBoth = moveTargets(cannonDuel, 0).find((target) => target.to === 2);
-assert(cannonBoth?.kind === 'both', '炮吃炮没有互吃');
+assert(cannonBoth?.kind === 'take', '炮吃炮被当成互吃');
 const afterCannon = cannonDuel.slice();
 commitMove(afterCannon, 0, 2);
-assert(afterCannon[0] === EMPTY && afterCannon[2] === EMPTY, '炮互吃后没有同时消失');
+assert(afterCannon[0] === EMPTY && afterCannon[2] === open(CANNON, RED), '炮吃炮后自己的炮消失了');
 
 const blocked = new Uint8Array(CELL_COUNT);
 blocked[4] = open(CHARIOT, RED);
