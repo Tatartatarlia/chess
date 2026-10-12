@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { chooseBanqiAction, type BanqiAiResponse } from '../game/banqi/ai.ts';
 import {
   BLACK,
+  DRAW_AFTER_MOVES,
   RED,
   isHidden,
   isHumanTurn,
@@ -123,7 +124,7 @@ export function BanqiGame({ launch, announce, hint, onHome, onFinish }: BanqiGam
       setMoves(nextMoves);
       setBoard(position.board);
       setHumanSide(position.humanSide);
-      const result = resultOf(position.board, position.humanSide, isHumanTurn(nextMoves.length, humanFirst));
+      const result = resultOf(position.board, position.humanSide, isHumanTurn(nextMoves.length, humanFirst), nextMoves.length);
       if (result !== 'playing') settle(result);
     },
     [humanFirst, layout, settle],
@@ -256,7 +257,9 @@ export function BanqiGame({ launch, announce, hint, onHome, onFinish }: BanqiGam
           ? '你投降了，达达利亚赢了'
           : '达达利亚赢了'
         : status === 'draw'
-          ? '双方棋子都没了，这盘是和局'
+          ? counts.red === 0 && counts.black === 0
+            ? '双方棋子都没了，这盘是和局'
+            : `下了超过${DRAW_AFTER_MOVES}步，这盘是和局`
           : drawStep === 'draw'
             ? '正在抽取先后手…'
             : drawStep === 'result'
@@ -318,7 +321,7 @@ export function BanqiGame({ launch, announce, hint, onHome, onFinish }: BanqiGam
           <p className={`status status-${status}`} aria-live="polite">
             {text}
           </p>
-          <p className="rule-line">大子吃小子。兵能吃将，将不能吃兵。一样大互相吃掉，但炮吃炮只去掉对方。炮平时走一格，吃子时只能紧挨着隔一枚棋，中间不能再空一格。</p>
+          <p className="rule-line">大子吃小子。兵能吃将，将不能吃兵。一样大互相吃掉，但炮吃炮只去掉对方。炮平时走一格，吃子时只能紧挨着隔一枚棋。超过{DRAW_AFTER_MOVES}步仍未分胜负，算和局。</p>
         </div>
         <div className="actions">
           <button type="button" className="ghost" onClick={undo} disabled={!canUndo}>

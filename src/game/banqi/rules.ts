@@ -3,6 +3,7 @@ import type { Status } from '../types.ts';
 export const COLS = 4;
 export const ROWS = 8;
 export const CELL_COUNT = COLS * ROWS;
+export const DRAW_AFTER_MOVES = 300;
 
 export const EMPTY = 0;
 export const HIDDEN_MARK = 32;
@@ -234,11 +235,12 @@ export function judge(board: Uint8Array, humanSide: Side | null): Status {
   return 'playing';
 }
 
-export function resultOf(board: Uint8Array, humanSide: Side | null, humanToMove: boolean): Status {
+export function resultOf(board: Uint8Array, humanSide: Side | null, humanToMove: boolean, ply: number): Status {
   const judged = judge(board, humanSide);
   if (judged !== 'playing') return judged;
   const side = humanToMove ? humanSide : humanSide === null ? null : opposite(humanSide);
   if (legalActions(board, side).length === 0) return humanToMove ? 'lose' : 'win';
+  if (ply > DRAW_AFTER_MOVES) return 'draw';
   return 'playing';
 }
 

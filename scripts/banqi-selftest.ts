@@ -144,7 +144,7 @@ wiped[1] = open(PAWN, BLACK);
 wiped[4] = hidden(HORSE, RED);
 commitMove(wiped, 0, 1);
 assert(judge(wiped, RED) === 'win', '吃光对方没有获胜');
-assert(resultOf(wiped, RED, false) === 'win', '胜利结算不对');
+assert(resultOf(wiped, RED, false, 0) === 'win', '胜利结算不对');
 
 const drawn = new Uint8Array(CELL_COUNT);
 drawn[0] = open(ELEPHANT, RED);
@@ -158,7 +158,14 @@ stall[0] = open(PAWN, RED);
 stall[1] = open(ELEPHANT, BLACK);
 stall[4] = open(ELEPHANT, BLACK);
 assert(legalActions(stall, RED).every((action) => action.kind !== 'move'), '被堵住的兵还能走');
-assert(resultOf(stall, RED, true) === 'lose', '无子可走没有判负');
+assert(resultOf(stall, RED, true, 0) === 'lose', '无子可走没有判负');
+assert(resultOf(stall, RED, true, 300) === 'lose', '超过步数前无子可走仍应判负');
+const lingering = new Uint8Array(CELL_COUNT);
+lingering[0] = open(CHARIOT, RED);
+lingering[2] = open(CHARIOT, BLACK);
+assert(resultOf(lingering, RED, true, 300) === 'playing', '下满300步不该立刻和局');
+assert(resultOf(lingering, RED, true, 301) === 'draw', '超过300步没有判和');
+assert(resultOf(wiped, RED, false, 301) === 'win', '超过300步吃光对方仍应获胜');
 
 const cheatA = standardLayout();
 cheatA[0] = hidden(PAWN, BLACK);
@@ -196,7 +203,7 @@ let side: typeof RED | typeof BLACK | null = null;
 for (let ply = 0; ply < 80; ply += 1) {
   const human = ply % 2 === 0;
   const actor = human ? side : side === null ? null : side === RED ? BLACK : RED;
-  if (resultOf(cursor, side, human) !== 'playing') break;
+  if (resultOf(cursor, side, human, ply) !== 'playing') break;
   const action = chooseBanqiAction(cursor, ply % 2 === 0 ? 'easy' : 'normal', () => ((ply * 17) % 10) / 10, actor, null);
   assert(isLegalAction(cursor, actor, action), `第 ${ply} 手非法`);
   if (action.kind === 'flip') {

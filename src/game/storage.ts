@@ -101,7 +101,7 @@ function isBanqiSave(value: SaveGame): value is BanqiSave {
   if (!isStandardLayout(value.layout)) return false;
   const position = replayBanqi(value.layout, value.moves, value.humanFirst);
   if (!position) return false;
-  return resultOf(position.board, position.humanSide, isHumanTurn(value.moves.length, value.humanFirst)) === 'playing';
+  return resultOf(position.board, position.humanSide, isHumanTurn(value.moves.length, value.humanFirst), value.moves.length) === 'playing';
 }
 
 function isSave(value: unknown): value is SaveGame {
