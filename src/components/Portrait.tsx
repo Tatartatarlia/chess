@@ -9,7 +9,10 @@ export function Portrait({ who }: PortraitProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ready, setReady] = useState(() => portraitReady(who));
 
-  useEffect(() => subscribeAvatar(() => setReady(portraitReady(who))), [who]);
+  useEffect(() => {
+    setReady(portraitReady(who));
+    return subscribeAvatar(() => setReady(portraitReady(who)));
+  }, [who]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

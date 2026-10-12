@@ -1,7 +1,9 @@
 import { BLACK, EMPTY, SIZE, WHITE, idx, type Point } from '../game/types.ts';
 
-export const TARTAGLIA_SRC = '/tartaglia.webp';
-export const TRAVELER_SRC = '/traveler.webp';
+const publicFile = (file: string) => `${import.meta.env.BASE_URL}${file}`;
+
+export const TARTAGLIA_SRC = publicFile('tartaglia.webp');
+export const TRAVELER_SRC = publicFile('traveler.webp');
 
 export type BoardMetrics = {
   size: number;
@@ -343,8 +345,8 @@ function watchImage(image: HTMLImageElement, src: string) {
   const notify = () => {
     avatarListeners.forEach((listener) => listener());
   };
-  image.addEventListener('load', notify, { once: true });
-  image.addEventListener('error', notify, { once: true });
+  image.addEventListener('load', notify);
+  image.addEventListener('error', notify);
 }
 
 export const tartagliaImage = new Image();
