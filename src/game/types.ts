@@ -11,7 +11,7 @@ export type Status = 'playing' | 'win' | 'lose' | 'draw';
 
 export const idx = (x: number, y: number) => y * SIZE + x;
 
-export type GameMode = 'gomoku';
+export type GameMode = 'gomoku' | 'banqi';
 
 export type AiRequest = {
   id: number;

@@ -148,11 +148,46 @@ h1 {
   display: block;
 }
 
+.chip {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #8a8178;
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.chip.red {
+  background: #c4382a;
+}
+
+.chip.black {
+  background: #2a2420;
+  color: #f6efe6;
+}
+
+.rule-line {
+  margin: 6px 0 0;
+  max-width: 640px;
+  color: #cbb59f;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.55;
+}
+
 .board-wrap {
   width: min(100%, 68vh, 680px);
   margin: 0 auto;
   aspect-ratio: 1;
   filter: drop-shadow(0 22px 28px rgba(0, 0, 0, 0.45));
+}
+
+.board-wrap.banqi {
+  width: min(100%, 340px);
+  aspect-ratio: 1 / 2;
 }
 
 .board {
@@ -275,6 +310,10 @@ h1 {
 .pick-levels {
   display: grid;
   gap: 12px;
+}
+
+.modes {
+  grid-template-columns: 1fr 1fr;
 }
 
 .pick-levels {
@@ -404,6 +443,10 @@ h1 {
 
   .stage {
     grid-template-columns: 1fr 1fr;
+  }
+
+  .modes {
+    grid-template-columns: 1fr;
   }
 
   .board-wrap {

@@ -1,3 +1,10 @@
+import {
+  isHumanTurn,
+  isStandardLayout,
+  replayBanqi,
+  resultOf,
+  type BanqiMove,
+} from './banqi/rules.ts';
 import { BLACK, EMPTY, SIZE, WHITE, idx, type Difficulty, type GameMode, type Point, type Status, type Stone } from './types.ts';
 
 const SAVE_KEY = 'dada-chess-save';
@@ -11,13 +18,24 @@ export type MatchRecord = {
   at: number;
 };
 
-export type SaveGame = {
-  mode: GameMode;
+export type GomokuSave = {
+  mode: 'gomoku';
   difficulty: Difficulty;
   humanStone: Stone;
   moves: Point[];
   undoUsed: boolean;
 };
+
+export type BanqiSave = {
+  mode: 'banqi';
+  difficulty: Difficulty;
+  humanFirst: boolean;
+  layout: number[];
+  moves: BanqiMove[];
+  undoUsed: boolean;
+};
+
+export type SaveGame = GomokuSave | BanqiSave;
 
 const DIFFICULTIES: readonly Difficulty[] = ['easy', 'normal', 'hard'];
 
@@ -38,6 +56,16 @@ function isDifficulty(value: unknown): value is Difficulty {
   return DIFFICULTIES.includes(value as Difficulty);
 }
 
+function isBanqiMove(value: unknown): value is BanqiMove {
+  if (!value || typeof value !== 'object') return false;
+  const move = value as BanqiMove;
+  if (move.kind === 'flip') return Number.isInteger(move.index) && move.index >= 0 && move.index < 32;
+  if (move.kind === 'move') {
+    return [move.from, move.to].every((index) => Number.isInteger(index) && index >= 0 && index < 32);
+  }
+  return false;
+}
+
 export function stoneAtMove(index: number): Stone {
   return index % 2 === 0 ? BLACK : WHITE;
 }
@@ -53,14 +81,35 @@ export function replayMoves(moves: readonly Point[]) {
   return board;
 }
 
+function isGomokuSave(value: SaveGame): value is GomokuSave {
+  return (
+    value.mode === 'gomoku' &&
+    isDifficulty(value.difficulty) &&
+    (value.humanStone === BLACK || value.humanStone === WHITE) &&
+    typeof value.undoUsed === 'boolean' &&
+    Array.isArray(value.moves) &&
+    value.moves.every(isPoint) &&
+    replayMoves(value.moves) !== null
+  );
+}
+
+function isBanqiSave(value: SaveGame): value is BanqiSave {
+  if (value.mode !== 'banqi' || !isDifficulty(value.difficulty)) return false;
+  if (typeof value.humanFirst !== 'boolean' || typeof value.undoUsed !== 'boolean') return false;
+  if (!Array.isArray(value.layout) || !Array.isArray(value.moves)) return false;
+  if (value.moves.length > 400 || !value.moves.every(isBanqiMove)) return false;
+  if (!isStandardLayout(value.layout)) return false;
+  const position = replayBanqi(value.layout, value.moves, value.humanFirst);
+  if (!position) return false;
+  return resultOf(position.board, position.humanSide, isHumanTurn(value.moves.length, value.humanFirst)) === 'playing';
+}
+
 function isSave(value: unknown): value is SaveGame {
   if (!value || typeof value !== 'object') return false;
   const save = value as SaveGame;
-  if (save.mode !== 'gomoku' || !isDifficulty(save.difficulty)) return false;
-  if (save.humanStone !== BLACK && save.humanStone !== WHITE) return false;
-  if (typeof save.undoUsed !== 'boolean' || !Array.isArray(save.moves)) return false;
-  if (!save.moves.every(isPoint)) return false;
-  return replayMoves(save.moves) !== null;
+  if (save.mode === 'gomoku') return isGomokuSave(save);
+  if (save.mode === 'banqi') return isBanqiSave(save);
+  return false;
 }
 
 export function loadSave(): SaveGame | null {
@@ -86,7 +135,7 @@ function isRecord(value: unknown): value is MatchRecord {
   if (!value || typeof value !== 'object') return false;
   const record = value as MatchRecord;
   return (
-    record.mode === 'gomoku' &&
+    (record.mode === 'gomoku' || record.mode === 'banqi') &&
     isDifficulty(record.difficulty) &&
     (record.result === 'win' || record.result === 'lose' || record.result === 'draw') &&
     typeof record.at === 'number'

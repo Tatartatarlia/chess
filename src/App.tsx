@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { BanqiGame } from './components/BanqiGame.tsx';
+import { BoardView } from './components/BoardView.tsx';
+import { Portrait, StoneIcon } from './components/Portrait.tsx';
 import { chooseMove } from './game/ai.ts';
+import { shuffledLayout } from './game/banqi/rules.ts';
 import { isFull, winningLine } from './game/board.ts';
 import {
   clearSave,
@@ -10,12 +14,11 @@ import {
   replayMoves,
   stoneAtMove,
   writeSave,
+  type BanqiSave,
   type MatchRecord,
   type SaveGame,
 } from './game/storage.ts';
-import { BLACK, EMPTY, SIZE, WHITE, idx, type AiRequest, type AiResponse, type Difficulty, type Point, type Status, type Stone } from './game/types.ts';
-import { BoardView } from './components/BoardView.tsx';
-import { Portrait, StoneIcon } from './components/Portrait.tsx';
+import { BLACK, EMPTY, SIZE, WHITE, idx, type AiRequest, type AiResponse, type Difficulty, type GameMode, type Point, type Status, type Stone } from './game/types.ts';
 
 const THINK_MS: Record<Difficulty, number> = {
   easy: 320,
@@ -28,6 +31,16 @@ const HINT: Record<Difficulty, string> = {
   normal: '该赢会赢，该挡会挡',
   hard: '会往后多看几步',
 };
+
+const BANQI_HINT: Record<Difficulty, string> = {
+  easy: '经常乱翻乱走，吃子也不稳',
+  normal: '会吃能吃的子，也会躲开要被吃的子',
+  hard: '会看你下一手怎么应',
+};
+
+function modeName(mode: GameMode) {
+  return mode === 'banqi' ? '翻翻棋' : '五子棋';
+}
 
 const LEVELS: readonly { id: Difficulty; label: string }[] = [
   { id: 'easy', label: '简单' },
@@ -62,8 +75,19 @@ function rollSide(): Stone {
   return Math.random() < 0.5 ? BLACK : WHITE;
 }
 
+function rollBanqiOpening() {
+  return {
+    humanFirst: Math.random() < 0.5,
+    layout: shuffledLayout(Math.random),
+  };
+}
+
 export default function App() {
   const [screen, setScreen] = useState<Screen>('home');
+  const [mode, setMode] = useState<GameMode>('gomoku');
+  const [banqiLaunch, setBanqiLaunch] = useState<BanqiSave | null>(null);
+  const [announceBanqi, setAnnounceBanqi] = useState(false);
+  const [banqiNonce, setBanqiNonce] = useState(0);
   const [saveSlot, setSaveSlot] = useState<SaveGame | null>(() => loadSave());
   const [records, setRecords] = useState<MatchRecord[]>(() => loadHistory());
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -100,7 +124,7 @@ export default function App() {
   }, [history, status, screen]);
 
   useEffect(() => {
-    if (screen !== 'game' || status !== 'playing') return;
+    if (mode !== 'gomoku' || screen !== 'game' || status !== 'playing') return;
     writeSave({
       mode: 'gomoku',
       difficulty,
@@ -108,7 +132,7 @@ export default function App() {
       moves: history,
       undoUsed,
     });
-  }, [screen, status, difficulty, humanStone, history, undoUsed]);
+  }, [mode, screen, status, difficulty, humanStone, history, undoUsed]);
 
   function clearDrawTimers() {
     timers.current.forEach((id) => window.clearTimeout(id));
@@ -238,7 +262,33 @@ export default function App() {
     setSaveSlot(loadSave());
   }
 
+  const onBanqiFinish = useCallback((result: Exclude<Status, 'playing'>, level: Difficulty) => {
+    clearSave();
+    setSaveSlot(null);
+    setRecords(pushHistory({ mode: 'banqi', difficulty: level, result, at: Date.now() }));
+  }, []);
+
+  function beginBanqi(level: Difficulty) {
+    const save: BanqiSave = {
+      mode: 'banqi',
+      difficulty: level,
+      ...rollBanqiOpening(),
+      moves: [],
+      undoUsed: false,
+    };
+    setDifficulty(level);
+    setBanqiLaunch(save);
+    setAnnounceBanqi(true);
+    setBanqiNonce((value) => value + 1);
+    setScreen('game');
+    writeSave(save);
+  }
+
   function begin(level: Difficulty) {
+    if (mode === 'banqi') {
+      beginBanqi(level);
+      return;
+    }
     const side = rollSide();
     recorded.current = false;
     generation.current += 1;
@@ -264,6 +314,16 @@ export default function App() {
   function continueGame() {
     const saved = loadSave();
     if (!saved) return;
+    if (saved.mode === 'banqi') {
+      setMode('banqi');
+      setDifficulty(saved.difficulty);
+      setBanqiLaunch(saved);
+      setAnnounceBanqi(false);
+      setBanqiNonce((value) => value + 1);
+      setScreen('game');
+      return;
+    }
+    setMode('gomoku');
     const restored = replayMoves(saved.moves);
     if (!restored) return;
     recorded.current = false;
@@ -328,7 +388,7 @@ export default function App() {
               <div>
                 <strong>有一局还没下完</strong>
                 <p>
-                  五子棋 · {levelLabel(saveSlot.difficulty)} · 已下 {saveSlot.moves.length} 手
+                  {modeName(saveSlot.mode)} · {levelLabel(saveSlot.difficulty)} · 已下 {saveSlot.moves.length} 手
                 </p>
               </div>
               <button type="button" className="primary" onClick={continueGame}>
@@ -339,9 +399,27 @@ export default function App() {
 
           <h2 className="section-title">模式</h2>
           <div className="modes">
-            <button type="button" className="mode" onClick={() => setScreen('pick')}>
+            <button
+              type="button"
+              className="mode"
+              onClick={() => {
+                setMode('gomoku');
+                setScreen('pick');
+              }}
+            >
               <span>五子棋</span>
               <small>横竖斜连成五子即胜</small>
+            </button>
+            <button
+              type="button"
+              className="mode"
+              onClick={() => {
+                setMode('banqi');
+                setScreen('pick');
+              }}
+            >
+              <span>翻翻棋</span>
+              <small>4 列 8 行，翻开或走子，吃光对方即胜</small>
             </button>
           </div>
         </section>
@@ -351,8 +429,12 @@ export default function App() {
         <section className="home">
           <header className="top">
             <div>
-              <h1>五子棋</h1>
-              <p>先选难度，开局后再抽取先后手</p>
+              <h1>{modeName(mode)}</h1>
+              <p>
+                {mode === 'banqi'
+                  ? '先选难度。开局抽取先后手，你翻开的第一枚棋决定你的颜色'
+                  : '先选难度，开局后再抽取先后手'}
+              </p>
             </div>
             <button type="button" className="ghost" onClick={() => setScreen('home')}>
               返回
@@ -363,14 +445,25 @@ export default function App() {
             {LEVELS.map((level) => (
               <button key={level.id} type="button" className="level" onClick={() => begin(level.id)}>
                 <strong>{level.label}</strong>
-                <small>{HINT[level.id]}</small>
+                <small>{(mode === 'banqi' ? BANQI_HINT : HINT)[level.id]}</small>
               </button>
             ))}
           </div>
         </section>
       )}
 
-      {screen === 'game' && (
+      {screen === 'game' && mode === 'banqi' && banqiLaunch && (
+        <BanqiGame
+          key={banqiNonce}
+          launch={banqiLaunch}
+          announce={announceBanqi}
+          onHome={goHome}
+          onFinish={onBanqiFinish}
+          hint={BANQI_HINT[banqiLaunch.difficulty]}
+        />
+      )}
+
+      {screen === 'game' && mode === 'gomoku' && (
         <>
           <header className="top">
             <div>
@@ -456,8 +549,12 @@ export default function App() {
               <ol className="records">
                 {records.map((record) => (
                   <li key={`${record.at}-${record.difficulty}-${record.result}`}>
-                    <span>五子棋 · {levelLabel(record.difficulty)}</span>
-                    <strong className={`result-${record.result}`}>{RESULT_LABEL[record.result]}</strong>
+                    <span>
+                      {modeName(record.mode)} · {levelLabel(record.difficulty)}
+                    </span>
+                    <strong className={`result-${record.result}`}>
+                      {record.mode === 'banqi' && record.result === 'draw' ? '和局' : RESULT_LABEL[record.result]}
+                    </strong>
                     <time>{formatWhen(record.at)}</time>
                   </li>
                 ))}
